@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Clone') {
             steps {
-                git 'https://github.com/Manish636700/netflix-clone.git'
+                git branch: 'main', url: 'https://github.com/Manish636700/netflix-clone.git'
             }
         }
 
