@@ -4,6 +4,7 @@ pipeline {
     environment {
         IMAGE = "manish857/netflix-clone"
         TAG = "latest"
+        KUBECONFIG = "/var/lib/jenkins/.kube/config"
     }
 
     stages {
@@ -39,6 +40,11 @@ pipeline {
                 '''
             }
         }
+           stage('Cleanup') {
+            steps {
+                sh 'docker image prune -f'
+            }
+        }  
     }
 
     post {
