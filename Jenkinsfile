@@ -15,10 +15,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    export DOCKER_BUILDKIT=1
-                    docker build -t $IMAGE:$TAG -f Dockerfile .
-                '''
+                sh 'docker build -t $IMAGE:$TAG -f Dockerfile .'
             }
         }
 
