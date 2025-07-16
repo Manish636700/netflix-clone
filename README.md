@@ -24,10 +24,12 @@ JWT_SECRET=your_jwt_secre
 TMDB_API_KEY=your_tmdb_api_key
 ```
 
-### Run this app locally
+### Run this local
 
 ```shell
-npm run build
+1. install docker then run
+docker build -t <image_name>:<version> .
+docker run -itd -p 5000:5000 -p 5173:5173 <image_id>
 ```
 
 ### Start the app
