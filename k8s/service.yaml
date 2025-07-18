@@ -1,3 +1,4 @@
+# ===== Service =====
 apiVersion: v1
 kind: Service
 metadata:
@@ -7,6 +8,7 @@ spec:
     app: netflix
   ports:
     - protocol: TCP
-      port: 80
-      targetPort: 5000
+      port: 80         # service port (used inside cluster)
+      targetPort: 5000 # forwards to containerPort
+      nodePort: 30007  # optional; access via <NodeIP>:30007
   type: NodePort
