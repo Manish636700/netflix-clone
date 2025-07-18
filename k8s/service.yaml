@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: netflix-clone-svc
+  name: netflix-clone-service
 spec:
   selector:
     app: netflix
   ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 3000
-  type: NodePort
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+  type: LoadBalancer
