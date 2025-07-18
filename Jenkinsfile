@@ -40,11 +40,12 @@ pipeline {
                 '''
             }
         }
-           stage('Cleanup') {
+
+        stage('Cleanup') {
             steps {
                 sh 'docker image prune -f'
             }
-        }  
+        }
     }
 
     post {
