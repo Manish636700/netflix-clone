@@ -1,4 +1,3 @@
-# ===== Deployment =====
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,6 +14,6 @@ spec:
     spec:
       containers:
         - name: netflix
-          image: manish857/netflix-clone:latest
+          image: yourdockerhub/netflix-clone:latest
           ports:
-            - containerPort: 5000
+            - containerPort: 3000
