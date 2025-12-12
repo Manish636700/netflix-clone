@@ -23,9 +23,15 @@ git clone https://github.com/Manish636700/netflix-clone.git
 cd netflix-clone
 
 #############################################
+# BACKEND DEPENDENCIES
+#############################################
+cd backend
+npm install cors cookie-parser dotenv express@4
+
+#############################################
 # FRONTEND DEPLOYMENT
 #############################################
-cd frontend
+cd ../frontend
 npm install
 npm run build
 
@@ -37,7 +43,6 @@ sudo chown -R nginx:nginx /usr/share/nginx/html
 # BACKEND DEPLOYMENT
 #############################################
 cd ../backend
-
 rm -rf node_modules package-lock.json
 npm install
 
@@ -67,9 +72,10 @@ pm2 save
 pm2 startup systemd -u ec2-user --hp /home/ec2-user
 
 #############################################
-# NGINX CONFIGURATION (CORRECTED)
+# NGINX CONFIGURATION (CORRECTED + SPA FIX)
 #############################################
-sudo bash -c 'cat > /etc/nginx/nginx.conf' <<EOF
+
+sudo bash -c 'cat > /etc/nginx/nginx.conf <<EOF
 user nginx;
 worker_processes auto;
 
@@ -80,7 +86,6 @@ events {
 http {
     include       mime.types;
     default_type  application/octet-stream;
-
     sendfile on;
 
     server {
@@ -91,21 +96,23 @@ http {
         index index.html;
 
         location / {
-            try_files $uri /index.html;
+            try_files \$uri \$uri/ /index.html;
         }
 
         location /api/ {
             proxy_pass http://127.0.0.1:5000;
             proxy_http_version 1.1;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         }
     }
 }
+EOF'
 
-EOF
 
+
+sudo nginx -t
 sudo systemctl restart nginx
 sudo systemctl enable nginx
 
