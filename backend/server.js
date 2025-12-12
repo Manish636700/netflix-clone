@@ -1,53 +1,58 @@
 import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
+import { connectDB } from "./config/db.js";
 
+dotenv.config();
+
+// Connect to database
+connectDB();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+/* ------------------ CORS CONFIG FOR ALB + MULTIPLE EC2 ------------------ */
+app.use(
+  cors({
+    origin: [
+      "http://YOUR-ALB-DNS",      // Example: http://myapp-alb-123.ap-south-1.elb.amazonaws.com
+      "http://YOUR-DOMAIN",       // Example: http://myapp.com
+      "https://YOUR-DOMAIN"       // HTTPS domain
+    ],
+    credentials: true,
+  })
+);
+
+app.use(express.json());
+app.use(cookieParser());
+
+/* ------------------ API ROUTES ------------------ */
 import authRoutes from "./routes/auth.route.js";
 import movieRoutes from "./routes/movie.route.js";
 import tvRoutes from "./routes/tv.route.js";
 import searchRoutes from "./routes/search.route.js";
 
-import { ENV_VARS } from "./config/envVars.js";
-import { connectDB } from "./config/db.js";
-import { protectRoute } from "./middleware/protectRoute.js";
-import dotenv from "dotenv";
-dotenv.config();
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/movies", movieRoutes);
+app.use("/api/v1/tv", tvRoutes);
+app.use("/api/v1/search", searchRoutes);
 
-// Path setup
+/* ------------------ SERVE FRONTEND BUILD ------------------ */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-console.log("MONGO_URI from env:", process.env.MONGO_URI);
+const frontendDist = path.join(__dirname, "../frontend/dist");
 
-const app = express();
-const PORT = ENV_VARS.PORT || 5000;
+app.use(express.static(frontendDist));
 
-// Middlewares
-app.use(express.json());
-app.use(cookieParser());
+app.get("*", (req, res) => {
+  res.sendFile(path.join(frontendDist, "index.html"));
+});
 
-// API Routes
-app.use("/api/v1/auth", authRoutes);
-app.use("/api/v1/movie", protectRoute, movieRoutes);
-app.use("/api/v1/tv", protectRoute, tvRoutes);
-app.use("/api/v1/search", protectRoute, searchRoutes);
-
-// Serve frontend in production
-if (ENV_VARS.NODE_ENV === "production") {
-    const frontendPath = path.join(__dirname, "..", "frontend", "dist");
-
-    // Serve compiled static files
-    app.use(express.static(frontendPath));
-
-    // SPA fallback (React/Vite routing)
-    app.get("*", (req, res) => {
-        res.sendFile(path.join(frontendPath, "index.html"));
-    });
-}
-
-// Start server
-app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on port ${PORT}`);
-    connectDB();
+/* ------------------ START SERVER ------------------ */
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
