@@ -45,9 +45,13 @@ const frontendDist = path.join(__dirname, "../frontend/dist");
 app.use(express.static(frontendDist));
 
 // FIXED: Express v5 catch-all route
-app.get(/.*/, (req, res) => {
+app.get("*", (req, res, next) => {
+  if (req.originalUrl.startsWith("/api")) {
+    return next();
+  }
   res.sendFile(path.join(frontendDist, "index.html"));
 });
+
 
 // Start server
 app.listen(PORT, () => {
