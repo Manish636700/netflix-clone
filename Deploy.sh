@@ -50,11 +50,11 @@ npm install
 # CREATE PRODUCTION .env FILE
 #############################################
 cat <<EOT > .env
-PORT=5000
-MONGO_URI=mongodb+srv://manishmittal296:FkYwXnhPMj5z3TVc@cluster0.u3btjud.mongodb.net/netflix?retryWrites=true&w=majority
-NODE_ENV=production
-JWT_SECRET=MySuperSecretJWTKey123!
-TMDB_API_KEY=9c9b3d7a9bfdbf7fc794cdf04a5a579b
+PORT={PORT}
+MONGO_URI={MONGO_URL}
+NODE_ENV={NODE_ENV}
+JWT_SECRET={JWT_SECRET}
+TMDB_API_KEY={TMDB_API_KEY}
 EOT
 
 #############################################
