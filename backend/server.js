@@ -37,23 +37,22 @@ app.use("/api/v1/movies", movieRoutes);
 app.use("/api/v1/tv", tvRoutes);
 app.use("/api/v1/search", searchRoutes);
 
-// Frontend serving
+// ---------- Frontend (FIXED) ----------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const frontendDist = path.join(__dirname, "../frontend/dist");
 
-app.use(express.static(frontendDist));
+// MUST match pipeline output: backend/public
+const frontendPath = path.join(__dirname, "public");
 
-// FIXED: Express v5 catch-all route
-app.get("*", (req, res, next) => {
-  if (req.originalUrl.startsWith("/api")) {
-    return next();
-  }
-  res.sendFile(path.join(frontendDist, "index.html"));
+app.use(express.static(frontendPath));
+
+app.get("*", (req, res) => {
+  if (req.originalUrl.startsWith("/api")) return;
+  res.sendFile(path.join(frontendPath, "index.html"));
 });
-
+// -------------------------------------
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });
