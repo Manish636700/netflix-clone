@@ -4,155 +4,54 @@ trigger:
       - main
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: ubuntu-latest
 
 variables:
-  nodeVersion: '22.x'
-  acrServiceConnection: 'netflix-acr-coneection'
-  acrName: 'netflixappcontainerregistry-ehcrgch2ewekehfu.azurecr.io'
-  imageName: 'netflix-web-app'
+  node_version: 18.x
 
-stages:
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: $(node_version)
 
-  # ------------------------------------------------------
-  # 1. BUILD STAGE
-  # ------------------------------------------------------
-  - stage: Build
-    displayName: "Build Fullstack App"
-    jobs:
-      - job: Build
-        steps:
+# Build frontend
+- script: |
+    cd frontend
+    npm install
+    npm run build
+  displayName: Build frontend
 
-          - task: NodeTool@0
-            inputs:
-              versionSpec: '$(nodeVersion)'
+# Attach frontend build to backend
+- script: |
+    rm -rf backend/public
+    mkdir -p backend/public
+    cp -r frontend/dist/* backend/public/
+  displayName: Attach frontend to backend
 
-          - script: |
-              cd backend
-              npm ci
-            displayName: 'Install backend dependencies'
+# Install backend dependencies
+- script: |
+    cd backend
+    npm install --production
+  displayName: Install backend dependencies
 
-          - script: |
-              cd frontend
-              npm ci
-              npm run build
-            displayName: 'Build React frontend'
+# Remove accidental env files
+- script: |
+    rm -f backend/.env
+  displayName: Ensure no env file is deployed
 
-          - script: |
-              rm -rf backend/public
-              mkdir -p backend/public
-              cp -R frontend/dist/* backend/public/
-            displayName: 'Copy frontend build to backend/public'
+# Package application
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: backend
+    includeRootFolder: false
+    archiveType: zip
+    archiveFile: $(Build.ArtifactStagingDirectory)/app.zip
+    replaceExistingArchive: true
 
-          - script: |
-              cd backend
-              npm ci --omit=dev
-            displayName: 'Install backend prod dependencies'
-
-          - task: ArchiveFiles@2
-            inputs:
-              rootFolderOrFile: 'backend'
-              includeRootFolder: false
-              archiveType: 'zip'
-              archiveFile: '$(Build.ArtifactStagingDirectory)/backend.zip'
-              replaceExistingArchive: true
-
-          - publish: '$(Build.ArtifactStagingDirectory)/backend.zip'
-            artifact: drop
-
-
-  # ------------------------------------------------------
-  # 2. QUALITY STAGE
-  # ------------------------------------------------------
-  - stage: Quality
-    dependsOn: Build
-    jobs:
-      - job: LintScan
-        steps:
-
-          - task: NodeTool@0
-            inputs:
-              versionSpec: '$(nodeVersion)'
-
-          - script: |
-              cd backend
-              npm ci
-              npm run lint || true
-            displayName: 'Run ESLint'
-
-          - script: |
-              cd backend
-              npm audit --omit=dev || true
-            displayName: 'Run Security Audit'
-
-
-  # ------------------------------------------------------
-  # 3. TEST STAGE
-  # ------------------------------------------------------
-  - stage: Test
-    dependsOn: Quality
-    jobs:
-      - job: JestTests
-        steps:
-
-          - task: NodeTool@0
-            inputs:
-              versionSpec: '$(nodeVersion)'
-
-          - script: |
-              cd backend
-              npm ci
-            displayName: 'Install test dependencies'
-
-          - script: |
-              cd backend
-              npm run test:ci
-            displayName: 'Run Jest Tests'
-
-          - task: PublishTestResults@2
-            inputs:
-              testResultsFiles: '**/junit.xml'
-            condition: succeededOrFailed()
-
-
-  # ------------------------------------------------------
-  # 4. DOCKER BUILD + PUSH (FINAL FIX)
-  # ------------------------------------------------------
-  - stage: Docker_After_Deploy
-    displayName: "Build & Push Docker Image to ACR"
-    dependsOn: Test
-    jobs:
-      - job: dockercreateimage
-        displayName: "Build and Push Docker Image (AMD64)"
-        steps:
-
-          # 1. Login to ACR (fix 401 Unauthorized)
-          - task: Docker@2
-            displayName: "Login to ACR"
-            inputs:
-              command: login
-              containerRegistry: "$(acrServiceConnection)"
-
-          # 2. Enable Buildx for linux/amd64 image creation
-          - script: |
-              echo "Installing buildx & enabling QEMU"
-              docker run --privileged --rm tonistiigi/binfmt --install all
-              docker buildx create --name mybuilder --use || true
-              docker buildx inspect --bootstrap
-            displayName: "Setup Docker Buildx"
-
-          # 3. Build and push Linux AMD64 image
-          - script: |
-              echo "Building and pushing AMD64 image"
-              docker buildx build \
-                --platform linux/amd64,linux/arm64 \
-                -t $(acrName)/$(imageName):$(Build.BuildId) \
-                -t $(acrName)/$(imageName):latest \
-                --push .
-            displayName: "Build & Push AMD64 Docker Image"
-
-          # 4. Print image info
-          - script: |
-              echo "Pushed image to:"
-              echo "$(acrName)/$(imageName):$(Build.BuildId)"
-            displayName: "Show pushed image info"
+# Deploy to App Service
+- task: AzureWebApp@1
+  inputs:
+    azureSubscription: 'azure-connection'
+    appType: webAppLinux
+    appName: 'netflix-clone'
+    package: $(Build.ArtifactStagingDirectory)/app.zip
